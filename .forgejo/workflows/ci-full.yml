@@ -60,23 +60,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Trivy — filesystem vulnerability scan (uses action to avoid DinD mount issues)
+      - name: Install Trivy
+        run: |
+          apt-get update && apt-get install -y curl
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+      # Trivy — filesystem vulnerability scan
       - name: Trivy Filesystem Scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '0'
+        run: trivy fs --severity CRITICAL,HIGH --exit-code 0 .
 
       # Trivy — IaC misconfiguration scan
       - name: Trivy IaC Scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'config'
-          scan-ref: '.'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '0'
+        run: trivy config --severity CRITICAL,HIGH --exit-code 0 .
 
   # ---------------------------------------------------------------------------
   # Semgrep SAST Scan
@@ -87,14 +82,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
       - name: Install and Run Semgrep
         run: |
-          pip install semgrep
+          apt-get update && apt-get install -y python3 python3-pip
+          pip3 install semgrep --break-system-packages
           semgrep --config=p/default --config=p/owasp-top-ten --config=p/security-audit . || true
 
   # ---------------------------------------------------------------------------
@@ -237,10 +228,9 @@ jobs:
         run: |
           docker build -t ${{ github.repository }}:${{ github.sha }} .
 
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
       - name: Trivy Image Scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'image'
-          image-ref: '${{ github.repository }}:${{ github.sha }}'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '0'
+        run: trivy image --severity CRITICAL,HIGH --exit-code 0 ${{ github.repository }}:${{ github.sha }}
