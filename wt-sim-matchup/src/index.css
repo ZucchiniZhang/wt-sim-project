@@ -1,0 +1,186 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  /* Military briefing theme — matte dark with amber/gold accents */
+  --color-aviation-charcoal: #0d0f11;
+  --color-aviation-slate: #171b20;
+  --color-aviation-slate-light: #1e2328;
+  --color-aviation-amber: #d4a843;
+  --color-aviation-amber-dark: #b8922e;
+  --color-aviation-amber-light: #e8c368;
+  --color-aviation-text: #e2e4e8;
+  --color-aviation-text-muted: #6b7280;
+  --color-aviation-border: #2a2f36;
+  --color-aviation-surface: #1a1e23;
+
+  /* Nation-specific colors */
+  --color-nation-usa: #4a90d9;
+  --color-nation-germany: #9a9a9a;
+  --color-nation-ussr: #e04444;
+  --color-nation-britain: #5b7ec9;
+  --color-nation-japan: #e05050;
+  --color-nation-italy: #3aad55;
+  --color-nation-france: #5a70cc;
+  --color-nation-china: #dd3838;
+  --color-nation-sweden: #3ea5dd;
+  --color-nation-israel: #5588ee;
+
+  /* Fonts */
+  --font-header: "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+
+  /* Animations */
+  --animate-tilt: tilt 0.3s ease-in-out;
+  --animate-fill: fill 0.6s ease-out forwards;
+
+  @keyframes tilt {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(0.5deg) scale(1.01); }
+  }
+  @keyframes fill {
+    0% { width: 0%; }
+    100% { width: var(--fill-width); }
+  }
+
+  /* Box shadows */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-card-lg: 0 4px 16px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Base styles */
+html {
+  font-size: 16px;
+}
+
+body {
+  background-color: var(--color-aviation-charcoal);
+  color: var(--color-aviation-text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #0d0f11;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 168, 67, 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 168, 67, 0.4);
+}
+
+::selection {
+  background: rgba(212, 168, 67, 0.25);
+  color: #e2e4e8;
+}
+
+/* Component classes */
+.panel-border {
+  border: 1px solid var(--color-aviation-border);
+}
+
+.panel-border-active {
+  border: 1px solid rgba(212, 168, 67, 0.4);
+}
+
+.section-label {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--color-aviation-text-muted);
+}
+
+/* Corner bracket decorations — military briefing aesthetic */
+.corner-brackets {
+  position: relative;
+}
+
+.corner-brackets::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+  background-image:
+    /* top-left */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M0 10V0h10' fill='none' stroke='%23d4a843' stroke-opacity='0.4' stroke-width='1'/%3E%3C/svg%3E"),
+    /* top-right */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M10 10V0H0' fill='none' stroke='%23d4a843' stroke-opacity='0.4' stroke-width='1'/%3E%3C/svg%3E"),
+    /* bottom-left */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M0 0v10h10' fill='none' stroke='%23d4a843' stroke-opacity='0.4' stroke-width='1'/%3E%3C/svg%3E"),
+    /* bottom-right */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M10 0v10H0' fill='none' stroke='%23d4a843' stroke-opacity='0.4' stroke-width='1'/%3E%3C/svg%3E");
+  background-position:
+    4px 4px,
+    calc(100% - 4px) 4px,
+    4px calc(100% - 4px),
+    calc(100% - 4px) calc(100% - 4px);
+  background-size: 10px 10px;
+  background-repeat: no-repeat;
+}
+
+/* Scanline overlay — CRT/military monitor texture for empty/loading states */
+.scanlines {
+  position: relative;
+}
+
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 1px,
+    rgba(0, 0, 0, 0.06) 1px,
+    rgba(0, 0, 0, 0.06) 2px
+  );
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+}
+
+/* Reduced motion: disable CSS animations for users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin,
+  .animate-pulse {
+    animation: none !important;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Accessibility utility: screen reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+.focus\:not-sr-only:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}

@@ -1,0 +1,793 @@
+openapi: 3.0.0
+servers:
+- description: Main Server
+  url: "https://www.wtvehiclesapi.sgambe.serv00.net/api"
+- description: Dev Server
+  url: "http://localhost:3000/api"
+info:
+  description: This is the unofficial API for War Thunder Vehicles. It is not affiliated with Gaijin Entertainment.
+  version: 3.0.0
+  title: War Thunder Vehicles API
+  contact:
+    email: studente.cosimo.sgambelluri@gmail.com
+  license:
+    name: GNU 3.0
+    url: "https://www.gnu.org/licenses/gpl-3.0.en.html"
+paths:
+  /vehicles:
+    get:
+      summary: Get all vehicles
+      parameters:
+      - name: limit
+        in: query
+        description: Maximum number of vehicles to return
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 200
+          default: 200
+      - name: page
+        in: query
+        description: Pagination control. Takes count of current vehicle limit.
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      - name: country
+        in: query
+        description: Filter by country
+        schema:
+          type: string
+          enum:
+          - britain
+          - china
+          - france
+          - germany
+          - isreal
+          - italy
+          - japan
+          - sweden
+          - usa
+          - ussr
+      - name: type
+        in: query
+        description: Filter by vehicle type
+        schema:
+          type: string
+          enum:
+          - tank
+          - light_tank
+          - medium_tank
+          - heavy_tank
+          - tank_destroyer
+          - spaa
+          - lbv
+          - mbv
+          - hbv
+          - exoskeleton
+          - attack_helicopter
+          - utility_helicopter
+          - fighter
+          - assault
+          - bomber
+          - ship
+          - destroyer
+          - light_cruiser
+          - boat
+          - heavy_boat
+          - barge
+          - frigate
+          - heavy_cruiser
+          - battlecruiser
+          - battleship
+          - submarine
+      - name: era
+        in: query
+        description: Filter by vehicle era
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 8
+      - name: isPremium
+        in: query
+        description: Filter by premium status
+        schema:
+          type: boolean
+          default: false
+      - name: isPack
+        in: query
+        description: If true, only vehicles pack will be returned.
+        schema:
+          type: boolean
+          default: false
+      - name: isSquadronVehicle
+        in: query
+        description: If true, only squadron vehicles will be returned.
+        schema:
+          type: boolean
+          default: false
+      - name: isOnMarketplace
+        in: query
+        description: If true, only vehicles on marketplace will be returned.
+        schema:
+          type: boolean
+          default: false
+      - name: excludeKillstreak
+        in: query
+        description: If true, killstreak vehicles (atomic bombers, UAVs etc) will be excluded.
+        schema:
+          type: boolean
+          default: true
+      - name: excludeEventVehicles
+        in: query
+        description: If true, event vehicles will be excluded.
+        schema:
+          type: boolean
+          default: true
+      responses:
+        "200":
+          description: Vehicles matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VehicleGeneric"
+                maxItems: 200
+        "404":
+          description: No vehicles matching criteria found
+      description: Returns a list of vehicles that satisfies the user's filters.
+  "/vehicles/{identifier}":
+    get:
+      summary: Get one specific vehicle
+      parameters:
+      - name: identifier
+        in: path
+        description: Vehicle identifier
+        required: true
+        schema:
+          type: string
+          example: yak-7b
+      - name: version
+        in: query
+        description: The optional vehicle version
+        required: false
+        schema:
+          type: string
+          example: 2.53.0.7
+
+      responses:
+        "200":
+          description: Vehicle matching identifier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VehicleSpecific"
+        "404":
+          description: No vehicle matching identifier
+
+  "/vehicles/search/{name}":
+    get:
+      summary: Search IDs by common name
+      parameters:
+      - name: name
+        in: path
+        description: Vehicle name
+        required: true
+        schema:
+          type: string
+          example: t-34
+      responses:
+        "200":
+          description: Vehicles IDs matching name
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VehiclesIDs"
+                maxItems: 200
+        "404":
+          description: No vehicles matching name found
+  "/vehicles/stats":
+    get:
+      summary: Get comprehensive vehicle statistics
+      description: Returns aggregated data about vehicles including costs, categories, and national breakdowns
+      parameters:
+      - name: version
+        in: query
+        description: The version of the game to calculate statistics on
+        required: false
+        schema:
+          type: string
+          example: 2.53.0.7
+      responses:
+        '200':
+          description: Successful response with vehicle statistics
+
+components:
+  schemas:
+    VehicleGeneric:
+      type: object
+      properties:
+        identifier:
+          type: string
+        country:
+          type: string
+        vehicle_type:
+          type: string
+        vehicle_sub_types:
+          type: array
+          minItems: 0
+          items:
+            type: string
+        era:
+          type: integer
+          format: int32
+        arcade_br:
+          type: integer
+          format: int32
+        realistic_br:
+          type: integer
+          format: int32
+        realistic_ground_br:
+          type: integer
+          format: int32
+        simulator_br:
+          type: integer
+          format: int32
+        simulator_ground_br:
+          type: integer
+          format: int32
+        event:
+          type: string
+          format: nullable
+        release_date:
+          type: string
+          format: date-time
+        is_premium:
+          type: boolean
+        is_pack:
+          type: boolean
+        on_marketplace:
+          type: boolean
+        squadron_vehicle:
+          type: boolean
+        value:
+          type: integer
+          format: int32
+        req_exp:
+          type: integer
+          format: int32
+        ge_cost:
+          type: integer
+          format: int32
+        sl_mul_arcade:
+          type: number
+        sl_mul_realistic:
+          type: number
+        sl_mul_simulator:
+          type: number
+        exp_mul:
+          type: number
+        crew_total_count:
+          type: number
+        visibility:
+          type: number
+        hull_armor:
+          type: array
+          minItems: 0
+          maxItems: 3
+          items:
+            type: integer
+            format: int32
+        turret_armor:
+          type: array
+          minItems: 0
+          maxItems: 3
+          items:
+            type: integer
+            format: int32
+        images:
+          type: object
+          properties:
+            image:
+              type: string
+            techtree:
+              type: string
+    VehicleSpecific:
+      type: object
+      properties:
+        identifier:
+          type: string
+        country:
+          type: string
+        vehicle_type:
+          type: string
+        vehicle_sub_types:
+          type: array
+          minItems: 0
+          items:
+            type: string
+        event:
+          type: string
+          format: nullable
+        release_date:
+          type: string
+          format: nullable
+        era:
+          type: integer
+          format: int32
+        arcade_br:
+          type: integer
+          format: int32
+        realistic_br:
+          type: integer
+          format: int32
+        realistic_ground_br:
+          type: integer
+          format: int32
+        simulator_br:
+          type: integer
+          format: int32
+        simulator_ground_br:
+          type: integer
+          format: int32
+        req_exp:
+          type: integer
+          format: int32
+        is_premium:
+          type: boolean
+        is_pack:
+          type: boolean
+        on_marketplace:
+          type: boolean
+        squadron_vehicle:
+          type: boolean
+        ge_cost:
+          type: integer
+          format: int32
+        sl_mul_arcade:
+          type: number
+        sl_mul_realistic:
+          type: number
+        sl_mul_simulator:
+          type: number
+        exp_mul:
+          type: number
+        crew_total_count:
+          type: integer
+          format: int32
+        visibility:
+          type: number
+        hull_armor:
+          type: array
+          minItems: 0
+          maxItems: 3
+          items:
+            type: integer
+            format: int32
+        turret_armor:
+          type: array
+          items:
+            type: integer
+            format: int32
+          minItems: 0
+          maxItems: 3
+        mass:
+          type: integer
+          format: int32
+        train1_cost:
+          type: integer
+          format: int32
+        train2_cost:
+          type: integer
+          format: int32
+        train3_cost_gold:
+          type: integer
+          format: int32
+        train3_cost_exp:
+          type: integer
+          format: int32
+        repair_time_arcade:
+          type: number
+        repair_time_realistic:
+          type: number
+        repair_time_simulator:
+          type: number
+        repair_time_no_crew_arcade:
+          type: number
+        repair_time_no_crew_realistic:
+          type: number
+        repair_time_no_crew_simulator:
+          type: number
+        repair_cost_arcade:
+          type: integer
+          format: int32
+        repair_cost_realistic:
+          type: integer
+          format: int32
+        repair_cost_simulator:
+          type: integer
+          format: int32
+        repair_cost_per_min_arcade:
+          type: integer
+          format: int32
+        repair_cost_per_min_realistic:
+          type: integer
+          format: int32
+        repair_cost_per_min_simulator:
+          type: integer
+          format: int32
+        repair_cost_full_upgraded_arcade:
+          type: integer
+          format: int32
+        repair_cost_full_upgraded_realistic:
+          type: integer
+          format: int32
+        repair_cost_full_upgraded_simulator:
+          type: integer
+          format: int32
+        required_vehicle:
+          type: string
+          format: nullable
+        engine:
+          type: object
+          properties:
+            horse_power_ab:
+              type: integer
+              format: int32
+            horse_power_rb_sb:
+              type: integer
+              format: int32
+            max_rpm:
+              type: integer
+              format: int32
+            min_rpm:
+              type: integer
+              format: int32
+            max_speed_ab:
+              type: integer
+              format: int32
+            max_reverse_speed_ab:
+              type: integer
+              format: int32
+            max_speed_rb_sb:
+              type: integer
+              format: int32
+            max_reverse_speed_rb_sb:
+              type: integer
+              format: int32
+        modifications:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              tier:
+                type: integer
+                format: int32
+              repair_coeff:
+                type: integer
+                format: int32
+              value:
+                type: integer
+                format: int32
+              req_exp:
+                type: integer
+                format: int32
+              ge_cost:
+                type: integer
+                format: int32
+              required_modification:
+                type: string
+                format: nullable
+              mod_class:
+                type: string
+              icon:
+                type: string
+        ir_devices:
+          type: object
+          properties:
+            commander_device:
+              type: string
+              enum:
+              - GEN1
+              - GEN2
+              - GEN2+
+              - GEN3
+              - GEN3+
+            driver_device:
+              type: string
+              enum:
+              - GEN1
+              - GEN2
+              - GEN2+
+              - GEN3
+              - GEN3+
+            pilot_device:
+              type: string
+              enum:
+              - GEN1
+              - GEN2
+              - GEN2+
+              - GEN3
+              - GEN3+
+            sight_device:
+              type: string
+              enum:
+              - GEN1
+              - GEN2
+              - GEN2+
+              - GEN3
+              - GEN3+
+            targeting_pod_device:
+              type: string
+              enum:
+              - GEN1
+              - GEN2
+              - GEN2+
+              - GEN3
+              - GEN3+
+            gunner_device:
+              type: string
+              enum:
+              - GEN1
+              - GEN2
+              - GEN2+
+              - GEN3
+              - GEN3+
+        thermal_devices:
+          type: object
+          properties:
+            commander_device:
+              type: string
+              enum:
+              - GEN1
+              - GEN2
+              - GEN2+
+              - GEN3
+              - GEN3+
+            driver_device:
+              type: string
+              enum:
+              - GEN1
+              - GEN2
+              - GEN2+
+              - GEN3
+              - GEN3+
+            pilot_device:
+              type: string
+              enum:
+              - GEN1
+              - GEN2
+              - GEN2+
+              - GEN3
+              - GEN3+
+            sight_device:
+              type: string
+              enum:
+              - GEN1
+              - GEN2
+              - GEN2+
+              - GEN3
+              - GEN3+
+            targeting_pod_device:
+              type: string
+              enum:
+              - GEN1
+              - GEN2
+              - GEN2+
+              - GEN3
+              - GEN3+
+            gunner_device:
+              type: string
+              enum:
+              - GEN1
+              - GEN2
+              - GEN2+
+              - GEN3
+              - GEN3+
+        ballistic_computer:
+          type: object
+          properties:
+            has_gun_ccip:
+              type: boolean
+            has_turret_ccip:
+              type: boolean
+            has_bombs_ccip:
+              type: boolean
+            has_rocket_ccip:
+              type: boolean
+            has_gun_ccrp:
+              type: boolean
+            has_turret_ccrp:
+              type: boolean
+            has_bombs_ccrp:
+              type: boolean
+            has_rocket_ccrp:
+              type: boolean
+        aerodynamics:
+          type: object
+          properties:
+            length:
+              type: number
+            wingspan:
+              type: number
+            wing_area:
+              type: number
+            empty_weight:
+              type: integer
+              format: int32
+            max_takeoff_weight:
+              type: integer
+              format: int32
+            max_altitude:
+              type: integer
+              format: int32
+            turn_time:
+              type: number
+            runway_length_required:
+              type: number
+            max_speed_at_altitude:
+              type: integer
+              format: int32
+        has_customizable_weapons:
+          type: boolean
+        weapons:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              weapon_type:
+                type: string
+              count:
+                type: integer
+                format: int32
+              ammos:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      format: nullable
+                    type:
+                      type: string
+                    caliber:
+                      type: number
+                    mass:
+                      type: number
+                    speed:
+                      type: integer
+                      format: int32
+                    max_distance:
+                      type: integer
+                      format: int32
+                    explosive_type:
+                      type: string
+                      format: nullable
+                    explosive_mass:
+                      type: string
+                      format: nullable
+        presets:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              weapons:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    weapon_type:
+                      type: string
+                    count:
+                      type: integer
+                      format: int32
+                    ammos:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          type:
+                            type: string
+                          caliber:
+                            type: number
+                          mass:
+                            type: number
+                          speed:
+                            type: integer
+                            format: "int32,nullable"
+                          max_distance:
+                            type: integer
+                            format: "int32,nullable"
+                          explosive_type:
+                            type: string
+                            format: nullable
+                          explosive_mass:
+                            type: number
+                            format: nullable
+        customizable_presets:
+          type: object
+          properties:
+            max_load:
+              type: integer
+              format: int32
+            max_load_left_wing:
+              type: integer
+              format: int32
+            max_load_right_wing:
+              type: integer
+              format: int32
+            max_disbalance:
+              type: integer
+              format: int32
+            pylons:
+              type: array
+              items:
+                type: object
+                properties:
+                  index:
+                    type: integer
+                    format: int32
+                  used_for_disbalance:
+                    type: boolean
+                  selectable_weapons:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        weapon_type:
+                          type: string
+                        count:
+                          type: integer
+                          format: int32
+                        ammos:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                                format: nullable
+                              type:
+                                type: string
+                              caliber:
+                                type: number
+                              mass:
+                                type: number
+                              speed:
+                                type: integer
+                                format: "int32, nullable"
+                              max_distance:
+                                type: integer
+                                format: "int32, nullable"
+                              explosive_type:
+                                type: string
+                                format: nullable
+                              explosive_mass:
+                                type: number
+                                format: nullable
+        images:
+          type: object
+          properties:
+            image:
+              type: string
+            techtree:
+              type: string
+    VehiclesIDs:
+      type: array
+      items:
+        type: string

@@ -1,0 +1,11 @@
+// Flight Academy Tab - Re-exports
+export { FlightAcademyTab } from './FlightAcademyTab';
+export { FlightAcademyErrorBoundary } from './FlightAcademyErrorBoundary';
+export { EmptyStateCard } from './EmptyStateCard';
+export { TacticalOverview } from './TacticalOverview';
+export { PerformanceQuickStats } from './PerformanceQuickStats';
+export { CombatTacticsSection } from './CombatTacticsSection';
+export { EnergyManagementDiagram } from './EnergyManagementDiagram';
+export { PerformanceEnvelope } from './PerformanceEnvelope';
+export { MatchupThreatMatrix } from './MatchupThreatMatrix';
+export { MECControlPanel } from './MECControlPanel';

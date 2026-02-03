@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dist-ssr/
+
+# Environment files (NEVER commit secrets)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# SQLite databases
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+*.sqlite3.bak
+
+# Downloaded assets (regenerate with scripts)
+wt-sim-matchup/public/aircraft-images/
+wt-sim-matchup/data/*.sqlite3
+wt-vehicles-api/vehiclesdb.sqlite3
+
+# Editor/IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Worktrees
+.worktrees/
+
+# Test coverage
+coverage/
+
+# Playwright MCP screenshots (debugging)
+.playwright-mcp/
