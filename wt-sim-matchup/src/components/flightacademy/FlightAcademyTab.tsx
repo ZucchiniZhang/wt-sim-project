@@ -6,8 +6,8 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { useTacticalGuide } from '../../hooks/useAIContent';
 import { useCuratedData } from '../../hooks/useCuratedData';
-import { FlightAcademyErrorBoundary } from './FlightAcademyErrorBoundary';
-import { EmptyStateCard } from './EmptyStateCard';
+import { ErrorBoundary } from '../ui/ErrorBoundary';
+import { AIEmptyState } from '../ui/AIEmptyState';
 import { TacticalOverview } from './TacticalOverview';
 import { PerformanceQuickStats } from './PerformanceQuickStats';
 import { CombatTacticsSection } from './CombatTacticsSection';
@@ -130,7 +130,25 @@ export function FlightAcademyTab({ aircraft }: FlightAcademyTabProps) {
 
   // No guide exists - show empty state
   if (!guide) {
-    return <EmptyStateCard onGenerate={generate} generating={generating} aiEnabled={aiEnabled} />;
+    return (
+      <AIEmptyState
+        icon="📋"
+        title="Tactical Guide Available"
+        description="Generate AI-powered tactical analysis for this aircraft"
+        features={[
+          'Combat tactics & energy management',
+          'Matchup recommendations',
+          'Performance optimization',
+          'MEC guidance (if applicable)',
+        ]}
+        onGenerate={generate}
+        generating={generating}
+        aiEnabled={aiEnabled}
+        loadingText="Generating tactical guide..."
+        buttonText="Generate Tactical Guide"
+        featureName="Flight Academy"
+      />
+    );
   }
 
   // Check if curated performance data is available for charts
@@ -140,7 +158,10 @@ export function FlightAcademyTab({ aircraft }: FlightAcademyTabProps) {
 
   // Full tactical guide content
   return (
-    <FlightAcademyErrorBoundary>
+    <ErrorBoundary
+      title="Flight Academy Error"
+      defaultMessage="A rendering error occurred in the Flight Academy tab."
+    >
       <motion.div
         className="space-y-6"
         variants={cVariants}
@@ -227,6 +248,6 @@ export function FlightAcademyTab({ aircraft }: FlightAcademyTabProps) {
           </motion.section>
         )}
       </motion.div>
-    </FlightAcademyErrorBoundary>
+    </ErrorBoundary>
   );
 }

@@ -12,8 +12,8 @@ import {
   TeamConfigurator,
   PreFlightIntel,
   WeeklySchedule,
-  MissionPlannerErrorBoundary,
 } from '../components/missionplanner';
+import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useBrackets } from '../hooks/useBrackets';
 import { useAircraft } from '../hooks/useAircraft';
 
@@ -54,7 +54,11 @@ export function MissionPlannerPage() {
     <PageContainer>
       <Header />
       <main id="main-content" className="flex-1 overflow-y-auto">
-        <MissionPlannerErrorBoundary>
+        <ErrorBoundary
+          title="Mission Planner Error"
+          defaultMessage="Something went wrong loading the Mission Planner."
+          withCornerBrackets={false}
+        >
           <motion.div
             className="container mx-auto px-4 py-6 max-w-[1600px] space-y-6"
             variants={containerVariants}
@@ -121,7 +125,7 @@ export function MissionPlannerPage() {
               </motion.div>
             )}
           </motion.div>
-        </MissionPlannerErrorBoundary>
+        </ErrorBoundary>
       </main>
     </PageContainer>
   );

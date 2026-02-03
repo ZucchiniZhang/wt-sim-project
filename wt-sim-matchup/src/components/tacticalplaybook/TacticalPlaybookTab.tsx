@@ -5,8 +5,8 @@
 
 import { motion, useReducedMotion } from 'framer-motion';
 import { useMatchupPlaybook } from '../../hooks/useAIContent';
-import { PlaybookErrorBoundary } from './PlaybookErrorBoundary';
-import { PlaybookEmptyState } from './PlaybookEmptyState';
+import { ErrorBoundary } from '../ui/ErrorBoundary';
+import { AIEmptyState } from '../ui/AIEmptyState';
 import { ThreatAssessmentCard } from './ThreatAssessmentCard';
 import { EngagementPrinciplesCard } from './EngagementPrinciplesCard';
 import { TacticalScenarioCard } from './TacticalScenarioCard';
@@ -116,18 +116,38 @@ export function TacticalPlaybookTab({ player, enemy }: TacticalPlaybookTabProps)
 
   if (!playbook) {
     return (
-      <PlaybookEmptyState
+      <AIEmptyState
+        icon="🎯"
+        title="Tactical Playbook Available"
+        description={
+          <>
+            Generate AI-powered engagement tactics for{' '}
+            <span className="text-aviation-amber">{playerName}</span>
+            {' '}vs{' '}
+            <span className="text-red-400">{enemyName}</span>
+          </>
+        }
+        features={[
+          'Threat assessment & reasoning',
+          'Engagement principles & win condition',
+          'Tactical scenarios with diagrams',
+          'Altitude advantage analysis',
+        ]}
         onGenerate={generate}
         generating={generating}
         aiEnabled={aiEnabled}
-        playerName={playerName}
-        enemyName={enemyName}
+        loadingText="Generating tactical playbook..."
+        buttonText="Generate Tactical Playbook"
+        featureName="Tactical Playbook"
       />
     );
   }
 
   return (
-    <PlaybookErrorBoundary>
+    <ErrorBoundary
+      title="Tactical Playbook Error"
+      defaultMessage="A rendering error occurred in the Tactical Playbook tab."
+    >
       <motion.div
         className="space-y-6"
         variants={cVariants}
@@ -180,6 +200,6 @@ export function TacticalPlaybookTab({ player, enemy }: TacticalPlaybookTabProps)
           </motion.section>
         )}
       </motion.div>
-    </PlaybookErrorBoundary>
+    </ErrorBoundary>
   );
 }

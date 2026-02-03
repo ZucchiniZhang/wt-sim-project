@@ -1,7 +1,5 @@
 // Flight Academy Tab - Re-exports
 export { FlightAcademyTab } from './FlightAcademyTab';
-export { FlightAcademyErrorBoundary } from './FlightAcademyErrorBoundary';
-export { EmptyStateCard } from './EmptyStateCard';
 export { TacticalOverview } from './TacticalOverview';
 export { PerformanceQuickStats } from './PerformanceQuickStats';
 export { CombatTacticsSection } from './CombatTacticsSection';
