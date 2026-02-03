@@ -24,3 +24,46 @@ jobs:
             -Dsonar.projectKey=wt-sim-project \
             -Dsonar.projectName="WT Sim Project" \
             -Dsonar.sources=.
+
+  # ---------------------------------------------------------------------------
+  # LLM Code Review (on PRs only)
+  # ---------------------------------------------------------------------------
+  ai-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        id: diff
+        run: |
+          git diff origin/${{ github.base_ref }}...HEAD > /tmp/pr.diff
+          echo "diff_size=$(wc -c < /tmp/pr.diff)" >> $GITHUB_OUTPUT
+
+      - name: AI Code Review
+        if: steps.diff.outputs.diff_size < 50000
+        run: |
+          DIFF=$(cat /tmp/pr.diff | head -c 30000)
+
+          REVIEW=$(curl -s http://host.docker.internal:11434/api/generate \
+            -d "{
+              \"model\": \"qwen2.5-coder:7b\",
+              \"prompt\": \"Review this git diff for bugs, security issues, and improvements. Be concise and actionable. Focus on real problems, not style nits.\n\nDiff:\n$DIFF\",
+              \"stream\": false,
+              \"options\": {
+                \"temperature\": 0.1,
+                \"num_predict\": 1024
+              }
+            }" | jq -r '.response')
+
+          echo "## 🤖 AI Code Review" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "$REVIEW" >> $GITHUB_STEP_SUMMARY
+
+      - name: Skip large diffs
+        if: steps.diff.outputs.diff_size >= 50000
+        run: |
+          echo "## 🤖 AI Code Review" >> $GITHUB_STEP_SUMMARY
+          echo "Diff too large for automated review ($(wc -c < /tmp/pr.diff) bytes)" >> $GITHUB_STEP_SUMMARY
