@@ -16,6 +16,7 @@ import { SpeedAltitudeChart } from '../components/charts/SpeedAltitudeChart';
 import { ClimbProfileChart } from '../components/charts/ClimbProfileChart';
 import { SelfRadarChart } from '../components/charts/SelfRadarChart';
 import { FlightAcademyTab } from '../components/flightacademy';
+import { containerVariants, itemVariants } from '../lib/animation-constants';
 import { useAircraft } from '../hooks/useAircraft';
 import { useCuratedData } from '../hooks/useCuratedData';
 import { useSelectionStore } from '../stores/selectionStore';
@@ -32,27 +33,6 @@ import type { Aircraft } from '../types/aircraft';
 interface AircraftDetailPageProps {
   aircraftId: string;
 }
-
-/** Stagger animation variants for sections */
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.15,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.4, ease: 'easeOut' as const },
-  },
-};
 
 export function AircraftDetailPage({ aircraftId }: AircraftDetailPageProps) {
   const { allAircraft, isLoading } = useAircraft();

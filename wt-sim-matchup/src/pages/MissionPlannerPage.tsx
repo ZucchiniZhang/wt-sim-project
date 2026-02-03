@@ -14,6 +14,12 @@ import {
   WeeklySchedule,
 } from '../components/missionplanner';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
+import {
+  containerVariants as baseContainerVariants,
+  itemVariants as baseItemVariants,
+  reducedContainerVariants,
+  reducedItemVariants,
+} from '../lib/animation-constants';
 import { useBrackets } from '../hooks/useBrackets';
 import { useAircraft } from '../hooks/useAircraft';
 
@@ -28,13 +34,8 @@ export function MissionPlannerPage() {
 
   const prefersReducedMotion = useReducedMotion();
 
-  const containerVariants = prefersReducedMotion
-    ? { hidden: { opacity: 1 }, visible: { opacity: 1 } }
-    : { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
-
-  const itemVariants = prefersReducedMotion
-    ? { hidden: { opacity: 1, y: 0 }, visible: { opacity: 1, y: 0 } }
-    : { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } };
+  const containerVariants = prefersReducedMotion ? reducedContainerVariants : baseContainerVariants;
+  const itemVariants = prefersReducedMotion ? reducedItemVariants : baseItemVariants;
 
   // Get brackets for the active cycle (auto or override)
   const activeBrackets = useMemo(() => {

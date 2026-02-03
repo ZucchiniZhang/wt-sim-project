@@ -6,6 +6,7 @@
 import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
+import { listItemVariants } from '../../lib/animation-constants';
 import type { DetailedBriefing } from '../../lib/threat-analysis';
 import type { ThreatAssessment } from '../../types/aircraft';
 
@@ -14,16 +15,6 @@ interface EngagementSummaryProps {
   detailedBriefing?: DetailedBriefing;
   className?: string;
 }
-
-/** Staggered fade-in for list items */
-const itemVariants = {
-  hidden: { opacity: 0, x: -8 },
-  visible: (i: number) => ({
-    opacity: 1,
-    x: 0,
-    transition: { duration: 0.2, delay: i * 0.04 },
-  }),
-};
 
 function SectionHeader({
   dotColor,
@@ -103,7 +94,7 @@ export const EngagementSummary = memo(function EngagementSummary({
                   custom={i}
                   initial="hidden"
                   animate="visible"
-                  variants={itemVariants}
+                  variants={listItemVariants}
                   className="flex items-center gap-2 text-sm font-mono text-red-400/80"
                 >
                   <span className="text-red-500/50">+</span>
@@ -127,7 +118,7 @@ export const EngagementSummary = memo(function EngagementSummary({
                   custom={i}
                   initial="hidden"
                   animate="visible"
-                  variants={itemVariants}
+                  variants={listItemVariants}
                   className="flex items-center gap-2 text-sm font-mono text-green-400/80"
                 >
                   <span className="text-green-500/50">-</span>
@@ -174,7 +165,7 @@ export const EngagementSummary = memo(function EngagementSummary({
                 custom={i}
                 initial="hidden"
                 animate="visible"
-                variants={itemVariants}
+                variants={listItemVariants}
                 className="flex items-start gap-2"
               >
                 <span className="text-red-500 font-mono text-sm leading-relaxed flex-shrink-0">
@@ -217,7 +208,7 @@ export const EngagementSummary = memo(function EngagementSummary({
                   custom={i}
                   initial="hidden"
                   animate="visible"
-                  variants={itemVariants}
+                  variants={listItemVariants}
                   className="flex items-center gap-2 text-sm font-mono text-red-400/80"
                 >
                   <span className="text-red-500/50">+</span>
@@ -240,7 +231,7 @@ export const EngagementSummary = memo(function EngagementSummary({
                   custom={i}
                   initial="hidden"
                   animate="visible"
-                  variants={itemVariants}
+                  variants={listItemVariants}
                   className="flex items-center gap-2 text-sm font-mono text-green-400/80"
                 >
                   <span className="text-green-500/50">-</span>
@@ -265,7 +256,7 @@ export const EngagementSummary = memo(function EngagementSummary({
                 custom={i}
                 initial="hidden"
                 animate="visible"
-                variants={itemVariants}
+                variants={listItemVariants}
                 className="flex items-start gap-2"
               >
                 <span className="text-aviation-amber/60 font-mono text-xs mt-0.5 flex-shrink-0">
