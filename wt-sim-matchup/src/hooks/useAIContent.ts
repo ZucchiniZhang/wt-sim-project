@@ -94,7 +94,7 @@ export function useTacticalGuide(aircraft: Aircraft | null) {
     if (!isAIEnabled()) {
       setState(prev => ({
         ...prev,
-        error: 'AI generation is not enabled. Configure your API key.',
+        error: 'AI generation is not enabled. Set VITE_AI_ENABLE_GENERATION=true and ensure Ollama is running.',
       }));
       return;
     }
@@ -205,7 +205,7 @@ export function useMatchupPlaybook(
     if (!isAIEnabled()) {
       setState(prev => ({
         ...prev,
-        error: 'AI generation is not enabled. Configure your API key.',
+        error: 'AI generation is not enabled. Set VITE_AI_ENABLE_GENERATION=true and ensure Ollama is running.',
       }));
       return;
     }
