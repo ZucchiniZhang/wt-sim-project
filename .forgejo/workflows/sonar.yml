@@ -47,6 +47,7 @@ jobs:
         run: |
           DIFF=$(cat /tmp/pr.diff | head -c 30000)
 
+          # Use python to parse JSON (available in ubuntu-latest, jq is not)
           REVIEW=$(curl -s http://host.docker.internal:11434/api/generate \
             -d "{
               \"model\": \"qwen2.5-coder:7b\",
@@ -56,7 +57,7 @@ jobs:
                 \"temperature\": 0.1,
                 \"num_predict\": 1024
               }
-            }" | jq -r '.response')
+            }" | python3 -c "import sys,json; print(json.load(sys.stdin).get('response','No response'))")
 
           echo "## 🤖 AI Code Review" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
