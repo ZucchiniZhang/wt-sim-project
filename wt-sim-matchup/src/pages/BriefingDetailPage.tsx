@@ -14,6 +14,7 @@ import { EngagementSummary } from '../components/briefing/EngagementSummary';
 import { PerformanceRadar } from '../components/matchup/PerformanceRadar';
 import { DualSpeedAltitudeChart } from '../components/charts/DualSpeedAltitudeChart';
 import { DualClimbProfileChart } from '../components/charts/DualClimbProfileChart';
+import { containerVariants, itemVariants } from '../lib/animation-constants';
 import { useAircraft } from '../hooks/useAircraft';
 import { useCuratedData } from '../hooks/useCuratedData';
 import { assessThreat, generateDetailedBriefing } from '../lib/threat-analysis';
@@ -26,26 +27,6 @@ interface BriefingDetailPageProps {
   myId: string;
   enemyId: string;
 }
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.1,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.35, ease: 'easeOut' as const },
-  },
-};
 
 export function BriefingDetailPage({ myId, enemyId }: BriefingDetailPageProps) {
   const { allAircraft, isLoading } = useAircraft();
