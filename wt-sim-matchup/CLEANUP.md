@@ -5,7 +5,9 @@ Comprehensive cleanup of WT Sim Matchup codebase to remove dead code and consoli
 
 ---
 
-## Phase A: Dead Code Removal (COMPLETE)
+## Phase A: Dead Code Removal — 🟢 SONNET (COMPLETE)
+
+Pure deletion tasks with exact line numbers given.
 
 ### Removed from `src/types/aircraft.ts`
 | Type | Lines | Reason |
@@ -39,10 +41,11 @@ Comprehensive cleanup of WT Sim Matchup codebase to remove dead code and consoli
 
 ---
 
-## Phase B: Pattern Consolidation (IN PROGRESS)
+## Phase B: Pattern Consolidation
 
-### B.1: ErrorBoundary Component
-**Status:** COMPLETE
+### B.1: ErrorBoundary Component — 🟣 OPUS (COMPLETE)
+
+Complex class component with props API design requiring architectural decisions.
 
 **Consolidates:**
 - `src/components/flightacademy/FlightAcademyErrorBoundary.tsx`
@@ -62,8 +65,9 @@ interface ErrorBoundaryProps {
 }
 ```
 
-### B.2: AIEmptyState Component
-**Status:** COMPLETE
+### B.2: AIEmptyState Component — 🟣 OPUS (COMPLETE)
+
+Complex state machine with multiple UI branches requiring careful props API design.
 
 **Consolidates:**
 - `src/components/flightacademy/EmptyStateCard.tsx`
@@ -71,8 +75,9 @@ interface ErrorBoundaryProps {
 
 **New file:** `src/components/ui/AIEmptyState.tsx`
 
-### B.3: LoadingSkeleton Component
-**Status:** Pending
+### B.3: LoadingSkeleton Component — 🟢 SONNET (Pending)
+
+Simple extraction with clear pattern, no logic changes.
 
 **Extracts inline loading skeletons from:**
 - `FlightAcademyTab.tsx`
@@ -80,15 +85,17 @@ interface ErrorBoundaryProps {
 
 **New file:** `src/components/ui/LoadingSkeleton.tsx`
 
-### B.4: Animation Constants
-**Status:** Pending
+### B.4: Animation Constants — 🟢 SONNET (Pending)
+
+Copy-paste extraction, no logic changes.
 
 **Consolidates duplicate Framer Motion variants from 6 files**
 
 **New file:** `src/lib/animation-constants.ts`
 
-### B.5: AIGeneratedBadge Component
-**Status:** Pending
+### B.5: AIGeneratedBadge Component — 🟢 SONNET (Pending)
+
+Trivial 15-line component extraction.
 
 **Consolidates identical badge markup from multiple files**
 
@@ -96,13 +103,13 @@ interface ErrorBoundaryProps {
 
 ---
 
-## Files to Delete After Consolidation
+## Files Deleted
 
-1. `src/components/flightacademy/FlightAcademyErrorBoundary.tsx`
-2. `src/components/flightacademy/EmptyStateCard.tsx`
-3. `src/components/tacticalplaybook/PlaybookErrorBoundary.tsx`
-4. `src/components/tacticalplaybook/PlaybookEmptyState.tsx`
-5. `src/components/missionplanner/MissionPlannerErrorBoundary.tsx`
+1. ~~`src/components/flightacademy/FlightAcademyErrorBoundary.tsx`~~ ✅
+2. ~~`src/components/flightacademy/EmptyStateCard.tsx`~~ ✅
+3. ~~`src/components/tacticalplaybook/PlaybookErrorBoundary.tsx`~~ ✅
+4. ~~`src/components/tacticalplaybook/PlaybookEmptyState.tsx`~~ ✅
+5. ~~`src/components/missionplanner/MissionPlannerErrorBoundary.tsx`~~ ✅
 
 ---
 
@@ -159,8 +166,8 @@ import { containerVariants, itemVariants } from '../../lib/animation-constants';
 ## Verification Checklist
 
 After each phase:
-- [ ] `npm run build` passes
-- [ ] `npm run test` passes
+- [x] `npm run build` passes
+- [x] `npm run test` passes
 - [ ] Home page loads
 - [ ] Aircraft detail → Flight Academy tab works
 - [ ] Briefing page → Tactical Playbook tab works
