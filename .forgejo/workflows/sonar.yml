@@ -50,30 +50,32 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
-          # Use Python for proper JSON handling (diff has special chars that break shell JSON)
-          python3 << 'PYEOF'
-          import json
-          import urllib.request
-          import os
+          python3 << 'EOF'
+          import json, urllib.request, os
 
-          # Read diff
           with open('/tmp/pr.diff', 'r', errors='replace') as f:
               diff = f.read()
 
-          diff_size = len(diff)
-          print(f"Diff size: {diff_size} bytes")
+          print(f"Diff size: {len(diff)} bytes")
 
-          if diff_size > 50000:
-              review = f"⚠️ Diff too large for AI review ({diff_size} bytes). Please review manually."
+          if len(diff) > 50000:
+              review = f"Diff too large for AI review ({len(diff)} bytes). Please review manually."
           else:
-              # Truncate diff for LLM
               diff = diff[:30000]
               print("Calling Ollama...")
 
-              prompt = f"""Review this git diff for bugs, security issues, and improvements. Be concise and actionable. Focus on real problems, not style nits.
+              prompt = f"""You are a code reviewer. Review this git diff and provide feedback on:
+          1. Potential bugs or errors
+          2. Security issues
+          3. Suggested improvements
 
-          Diff:
-          {diff}"""
+          Be concise. Only mention real issues, not style preferences.
+
+          ```diff
+          {diff}
+          ```
+
+          Provide your review in plain text (not JSON):"""
 
               payload = json.dumps({
                   "model": "qwen2.5-coder:7b",
@@ -92,30 +94,23 @@ jobs:
                       result = json.load(resp)
                       review = result.get("response", "No response from model")
                       print(f"Got review: {len(review)} chars")
+                      print(f"Preview: {review[:200]}")
               except Exception as e:
-                  review = f"⚠️ Error calling Ollama: {e}"
+                  review = f"Error calling Ollama: {e}"
                   print(review)
 
-          # Post comment to PR
           comment_body = f"## 🤖 AI Code Review\n\n{review}"
-          comment_payload = json.dumps({"body": comment_body}).encode()
-
-          pr_number = os.environ["PR_NUMBER"]
-          repo = os.environ["REPO"]
-          token = os.environ["FORGEJO_TOKEN"]
+          payload = json.dumps({"body": comment_body}).encode()
 
           req = urllib.request.Request(
-              f"http://forgejo:3000/api/v1/repos/{repo}/issues/{pr_number}/comments",
-              data=comment_payload,
-              headers={
-                  "Content-Type": "application/json",
-                  "Authorization": f"token {token}"
-              }
+              f"http://forgejo:3000/api/v1/repos/{os.environ['REPO']}/issues/{os.environ['PR_NUMBER']}/comments",
+              data=payload,
+              headers={"Content-Type": "application/json", "Authorization": f"token {os.environ['FORGEJO_TOKEN']}"}
           )
 
           try:
               with urllib.request.urlopen(req, timeout=30) as resp:
-                  print(f"Comment posted to PR #{pr_number}")
+                  print(f"Comment posted to PR #{os.environ['PR_NUMBER']}")
           except Exception as e:
               print(f"Failed to post comment: {e}")
-          PYEOF
+          EOF
