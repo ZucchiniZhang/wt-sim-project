@@ -1,0 +1,126 @@
+name: GitHub Sync
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Manual trigger button in UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for tags
+
+      - name: Configure Git
+        run: |
+          git config user.name "Forgejo Sync Bot"
+          git config user.email "bot@homelab.local"
+
+      - name: Check and create GitHub repository
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          GH_USER: ${{ vars.GH_USER }}
+        run: |
+          set -e
+
+          # Validate required secrets
+          if [ -z "$GH_PAT" ]; then
+            echo "::error::GH_PAT secret not set. Add it in Repo Settings → Actions → Secrets"
+            exit 1
+          fi
+
+          if [ -z "$GH_USER" ]; then
+            echo "::error::GH_USER variable not set. Add it in Repo Settings → Actions → Variables"
+            exit 1
+          fi
+
+          # Extract repo name from Forgejo repository
+          REPO_NAME=$(basename "$GITHUB_REPOSITORY")
+          echo "Repository name: $REPO_NAME"
+          echo "GitHub user: $GH_USER"
+
+          # Check if GitHub repo exists
+          echo "Checking if GitHub repository exists..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token $GH_PAT" \
+            "https://api.github.com/repos/$GH_USER/$REPO_NAME")
+
+          if [ "$STATUS" = "404" ]; then
+            echo "Repository not found on GitHub. Creating..."
+
+            RESPONSE=$(curl -s -w "\n%{http_code}" \
+              -X POST "https://api.github.com/user/repos" \
+              -H "Authorization: token $GH_PAT" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"name\": \"$REPO_NAME\",
+                \"private\": false,
+                \"description\": \"Mirror from Forgejo homelab\",
+                \"homepage\": \"https://git.homelab.local/$GITHUB_REPOSITORY\",
+                \"has_issues\": false,
+                \"has_projects\": false,
+                \"has_wiki\": false
+              }")
+
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            BODY=$(echo "$RESPONSE" | sed '$d')
+
+            if [ "$HTTP_CODE" = "201" ]; then
+              echo "✅ GitHub repository created successfully"
+              echo "$BODY" | grep -o '"html_url": "[^"]*"' || true
+            else
+              echo "::error::Failed to create GitHub repository (HTTP $HTTP_CODE)"
+              echo "$BODY"
+              exit 1
+            fi
+          elif [ "$STATUS" = "200" ]; then
+            echo "✅ GitHub repository already exists"
+          else
+            echo "::error::Unexpected response from GitHub API (HTTP $STATUS)"
+            echo "Check PAT permissions and network connectivity"
+            exit 1
+          fi
+
+      - name: Push to GitHub
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          GH_USER: ${{ vars.GH_USER }}
+        run: |
+          set -e
+
+          REPO_NAME=$(basename "$GITHUB_REPOSITORY")
+
+          # Add GitHub remote with authentication
+          echo "Adding GitHub remote..."
+          git remote add github "https://$GH_PAT@github.com/$GH_USER/$REPO_NAME.git" || \
+            git remote set-url github "https://$GH_PAT@github.com/$GH_USER/$REPO_NAME.git"
+
+          # Push main branch
+          echo "Pushing main branch to GitHub..."
+          if git push github main --force; then
+            echo "✅ Main branch synced successfully"
+          else
+            echo "::error::Failed to push main branch to GitHub"
+            echo "Check PAT permissions (needs 'repo' scope) and network connectivity"
+            exit 1
+          fi
+
+          # Push all tags
+          echo "Pushing tags to GitHub..."
+          if git push github --tags --force 2>&1 | tee /tmp/tag-push.log; then
+            if grep -q "Everything up-to-date" /tmp/tag-push.log; then
+              echo "ℹ️  No new tags to sync"
+            else
+              echo "✅ Tags synced successfully"
+            fi
+          else
+            echo "::warning::Failed to push tags (main branch still synced)"
+          fi
+
+          echo ""
+          echo "🎉 GitHub sync complete!"
+          echo "View at: https://github.com/$GH_USER/$REPO_NAME"
