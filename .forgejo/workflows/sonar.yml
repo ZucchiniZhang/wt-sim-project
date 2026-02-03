@@ -26,7 +26,7 @@ jobs:
             -Dsonar.sources=.
 
   # ---------------------------------------------------------------------------
-  # LLM Code Review (on PRs only)
+  # LLM Code Review (on PRs only) - posts comment directly on PR
   # ---------------------------------------------------------------------------
   ai-review:
     runs-on: ubuntu-latest
@@ -37,34 +37,58 @@ jobs:
           fetch-depth: 0
 
       - name: Get PR diff
-        id: diff
         run: |
+          git fetch origin ${{ github.base_ref }}
           git diff origin/${{ github.base_ref }}...HEAD > /tmp/pr.diff
-          echo "diff_size=$(wc -c < /tmp/pr.diff)" >> $GITHUB_OUTPUT
+          echo "Diff size: $(wc -c < /tmp/pr.diff) bytes"
+          echo "First 500 chars of diff:"
+          head -c 500 /tmp/pr.diff
 
       - name: AI Code Review
-        if: steps.diff.outputs.diff_size < 50000
+        env:
+          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          DIFF=$(cat /tmp/pr.diff | head -c 30000)
+          DIFF_SIZE=$(wc -c < /tmp/pr.diff)
+          echo "Diff size: $DIFF_SIZE bytes"
 
-          # Use python to parse JSON (available in ubuntu-latest, jq is not)
-          REVIEW=$(curl -s http://host.docker.internal:11434/api/generate \
-            -d "{
-              \"model\": \"qwen2.5-coder:7b\",
-              \"prompt\": \"Review this git diff for bugs, security issues, and improvements. Be concise and actionable. Focus on real problems, not style nits.\n\nDiff:\n$DIFF\",
-              \"stream\": false,
-              \"options\": {
-                \"temperature\": 0.1,
-                \"num_predict\": 1024
-              }
-            }" | python3 -c "import sys,json; print(json.load(sys.stdin).get('response','No response'))")
+          if [ "$DIFF_SIZE" -gt 50000 ]; then
+            REVIEW="⚠️ Diff too large for AI review ($DIFF_SIZE bytes). Please review manually."
+          else
+            DIFF=$(cat /tmp/pr.diff | head -c 30000)
+            echo "Calling Ollama..."
 
-          echo "## 🤖 AI Code Review" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "$REVIEW" >> $GITHUB_STEP_SUMMARY
+            # Call Ollama and capture full response for debugging
+            RESPONSE=$(curl -s --max-time 120 http://host.docker.internal:11434/api/generate \
+              -d "{
+                \"model\": \"qwen2.5-coder:7b\",
+                \"prompt\": \"Review this git diff for bugs, security issues, and improvements. Be concise and actionable. Focus on real problems, not style nits.\n\nDiff:\n$DIFF\",
+                \"stream\": false,
+                \"options\": {
+                  \"temperature\": 0.1,
+                  \"num_predict\": 1024
+                }
+              }")
 
-      - name: Skip large diffs
-        if: steps.diff.outputs.diff_size >= 50000
-        run: |
-          echo "## 🤖 AI Code Review" >> $GITHUB_STEP_SUMMARY
-          echo "Diff too large for automated review ($(wc -c < /tmp/pr.diff) bytes)" >> $GITHUB_STEP_SUMMARY
+            echo "Ollama response length: ${#RESPONSE}"
+
+            if [ -z "$RESPONSE" ]; then
+              REVIEW="⚠️ Could not reach Ollama. Is it running on the host?"
+            else
+              REVIEW=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('response','No response from model'))" 2>/dev/null || echo "⚠️ Failed to parse Ollama response")
+            fi
+          fi
+
+          echo "Review length: ${#REVIEW}"
+          echo "Review preview: ${REVIEW:0:200}"
+
+          # Post comment to PR via Forgejo API
+          COMMENT="## 🤖 AI Code Review\n\n$REVIEW"
+
+          curl -s -X POST \
+            -H "Authorization: token $FORGEJO_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$(python3 -c "import json; print(json.dumps({'body': '''$COMMENT'''}))")" \
+            "http://forgejo:3000/api/v1/repos/${{ github.repository }}/issues/$PR_NUMBER/comments"
+
+          echo "Comment posted to PR #$PR_NUMBER"
