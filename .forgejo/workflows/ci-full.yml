@@ -1,0 +1,218 @@
+# =============================================================================
+# Full CI/CD Pipeline — Forgejo Actions
+# Compatible with GitHub Actions syntax
+# =============================================================================
+# Copy this to .forgejo/workflows/ci.yml in your repos
+# =============================================================================
+
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  SONAR_HOST_URL: http://homelab-sonarqube:9000
+  OLLAMA_HOST: http://host.docker.internal:11434
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Lint & Test
+  # ---------------------------------------------------------------------------
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---- Language-specific setup (uncomment what you need) ----
+
+      # Node.js
+      # - uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '20'
+      # - run: npm ci
+      # - run: npm test
+
+      # Python
+      # - uses: actions/setup-python@v5
+      #   with:
+      #     python-version: '3.12'
+      # - run: pip install -r requirements.txt
+      # - run: pytest --cov=./ --cov-report=xml
+
+      # Go
+      # - uses: actions/setup-go@v5
+      #   with:
+      #     go-version: '1.22'
+      # - run: go test -v -coverprofile=coverage.out ./...
+
+      - name: Placeholder test
+        run: echo "Add your test commands above"
+
+  # ---------------------------------------------------------------------------
+  # Security Scanning
+  # ---------------------------------------------------------------------------
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      # Trivy — filesystem vulnerability scan
+      - name: Trivy Filesystem Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      # Trivy — IaC misconfiguration scan
+      - name: Trivy IaC Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'  # Don't fail on IaC for now
+
+      # Semgrep — SAST
+      - name: Semgrep SAST Scan
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/default
+            p/owasp-top-ten
+            p/security-audit
+        env:
+          SEMGREP_RULES: "p/default p/owasp-top-ten"
+
+  # ---------------------------------------------------------------------------
+  # SonarQube Analysis
+  # ---------------------------------------------------------------------------
+  sonarqube:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for blame info
+
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # ---------------------------------------------------------------------------
+  # LLM Code Review (on PRs only) - posts comment directly on PR
+  # ---------------------------------------------------------------------------
+  ai-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git diff origin/${{ github.base_ref }}...HEAD > /tmp/pr.diff
+          echo "Diff size: $(wc -c < /tmp/pr.diff) bytes"
+
+      - name: AI Code Review
+        env:
+          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 << 'EOF'
+          import json, urllib.request, os
+
+          with open('/tmp/pr.diff', 'r', errors='replace') as f:
+              diff = f.read()
+
+          print(f"Diff size: {len(diff)} bytes")
+
+          if len(diff) > 50000:
+              review = f"Diff too large for AI review ({len(diff)} bytes). Please review manually."
+          else:
+              diff = diff[:30000]
+              print("Calling Ollama...")
+
+              prompt = f"""You are a code reviewer. Review this git diff and provide feedback on:
+          1. Potential bugs or errors
+          2. Security issues
+          3. Suggested improvements
+
+          Be concise. Only mention real issues, not style preferences.
+
+          ```diff
+          {diff}
+          ```
+
+          Provide your review in plain text (not JSON):"""
+
+              payload = json.dumps({
+                  "model": "qwen2.5-coder:7b",
+                  "prompt": prompt,
+                  "stream": False,
+                  "options": {"temperature": 0.1, "num_predict": 1024}
+              }).encode()
+
+              try:
+                  req = urllib.request.Request(
+                      "http://host.docker.internal:11434/api/generate",
+                      data=payload,
+                      headers={"Content-Type": "application/json"}
+                  )
+                  with urllib.request.urlopen(req, timeout=180) as resp:
+                      result = json.load(resp)
+                      review = result.get("response", "No response from model")
+                      print(f"Got review: {len(review)} chars")
+              except Exception as e:
+                  review = f"Error calling Ollama: {e}"
+                  print(review)
+
+          comment_body = f"## 🤖 AI Code Review\n\n{review}"
+          payload = json.dumps({"body": comment_body}).encode()
+
+          req = urllib.request.Request(
+              f"http://forgejo:3000/api/v1/repos/{os.environ['REPO']}/issues/{os.environ['PR_NUMBER']}/comments",
+              data=payload,
+              headers={"Content-Type": "application/json", "Authorization": f"token {os.environ['FORGEJO_TOKEN']}"}
+          )
+
+          try:
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  print(f"Comment posted to PR #{os.environ['PR_NUMBER']}")
+          except Exception as e:
+              print(f"Failed to post comment: {e}")
+          EOF
+
+  # ---------------------------------------------------------------------------
+  # Docker Build (if Dockerfile exists)
+  # ---------------------------------------------------------------------------
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [security-scan]
+    if: hashFiles('Dockerfile') != ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ github.repository }}:${{ github.sha }} .
+
+      - name: Trivy Image Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ github.repository }}:${{ github.sha }}'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
