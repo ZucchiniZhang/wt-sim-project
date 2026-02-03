@@ -3,7 +3,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
 const app = express();
 app.use(cors());
@@ -13,14 +13,20 @@ app.set('json spaces', 2);
 const domainLimiter = rateLimit({
     windowMs: 72 * 60 * 60 * 1000,
     max: 10000,
-    keyGenerator: (req, res) => req.headers.origin || req.headers.referer || req.ip,
+    keyGenerator: (req, res) => {
+        const origin = req.headers.origin || req.headers.referer;
+        return origin || ipKeyGenerator(req, res);
+    },
     message: { error: "Too many API requests. Please slow down." },
 });
 
 const assetLimiter = rateLimit({
     windowMs: 72 * 60 * 60 * 1000,
     max: 10000,
-    keyGenerator: (req, res) => req.headers.origin || req.headers.referer || req.ip,
+    keyGenerator: (req, res) => {
+        const origin = req.headers.origin || req.headers.referer;
+        return origin || ipKeyGenerator(req, res);
+    },
     message: { error: "Too many asset requests. Please slow down." },
     standardHeaders: true,
     legacyHeaders: false,
