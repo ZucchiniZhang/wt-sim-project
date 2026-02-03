@@ -58,25 +58,6 @@ export function getNationName(nation: Nation): string {
 }
 
 /**
- * Get Tailwind color class for a nation
- */
-export function getNationColor(nation: Nation): string {
-  const colors: Record<Nation, string> = {
-    usa: 'nation-usa',
-    germany: 'nation-germany',
-    ussr: 'nation-ussr',
-    britain: 'nation-britain',
-    japan: 'nation-japan',
-    italy: 'nation-italy',
-    france: 'nation-france',
-    china: 'nation-china',
-    sweden: 'nation-sweden',
-    israel: 'nation-israel',
-  };
-  return colors[nation] || 'gray-500';
-}
-
-/**
  * Get icon/emoji for aircraft type
  */
 export function getAircraftTypeIcon(type: string): string {
@@ -120,21 +101,6 @@ export function getAircraftDisplayName(aircraft: Aircraft): string {
  */
 export function getAircraftImageUrl(identifier: string): string {
   return `/aircraft-images/${identifier}.png`;
-}
-
-/**
- * Format large numbers with thousands separator
- * @example formatNumber(10000) => "10,000"
- */
-export function formatNumber(num: number): string {
-  return num.toLocaleString('en-US');
-}
-
-/**
- * Clamp a value between min and max
- */
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
 }
 
 /**

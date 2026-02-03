@@ -159,26 +159,6 @@ export interface Aircraft {
   ballistic_computer?: Record<string, unknown>;
 }
 
-// Simplified aircraft for UI display
-export interface AircraftCardData {
-  identifier: string;
-  country: Nation;
-  name: string;
-  br: number;
-  type: VehicleType;
-  isPremium: boolean;
-  imageUrl?: string;
-}
-
-// Filter state for aircraft selection
-export interface AircraftFilters {
-  nations: Nation[];
-  brRange: [number, number];
-  types: VehicleType[];
-  showPremiums: boolean;
-  searchQuery: string;
-}
-
 // Sim bracket definition
 export interface SimBracket {
   id: string;
@@ -206,26 +186,6 @@ export interface MatchupResult {
   allyNations: Nation[];
   allyAircraft?: Aircraft[];
   activePresetName?: string;
-}
-
-// Comparison data for multiple aircraft
-export interface ComparisonData {
-  aircraft: Aircraft[];
-  metrics: ComparisonMetrics;
-}
-
-export interface ComparisonMetrics {
-  maxSpeed: number[];
-  maxSpeedAtAltitude: number[];
-  climbRate: number[];
-  turnTime: number[];
-  repairCost: number[];
-}
-
-// Search result with score
-export interface SearchResult {
-  aircraft: Aircraft;
-  score: number;
 }
 
 // Rotation cycle definition

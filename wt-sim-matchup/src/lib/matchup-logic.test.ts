@@ -187,8 +187,6 @@ describe('calculateMatchups', () => {
     );
 
     // Enemies should be sorted by proximity to 4.0
-    // const brs = result.enemyAircraft.map(a => a.simulator_br);
-
     // Verify Bf109G6 (4.3) is before A6M5 (4.7)
     const bf109Index = result.enemyAircraft.findIndex(
       a => a.identifier === 'bf109g6_germany'
