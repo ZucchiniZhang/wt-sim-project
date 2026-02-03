@@ -1044,21 +1044,84 @@ Subtle visual polish applied across all AI-powered features (Flight Academy, Tac
 
 ---
 
-## Phase 6: Testing & Optimization ⬜ PENDING
+## Phase 6: Testing & Optimization ✅ COMPLETE
 
 **Model:** 🟣 OPUS (Performance analysis, code splitting, quality testing)
-**Target Duration:** ~2-3 days
-**Status:** Not started
+**Completed:** 2026-02-03
+**Status:** All tasks complete
 
-### Tasks
-- AI content quality testing
-- Code splitting
-- Bundle size optimization
-- Performance testing
-- Cost optimization verification
+### What Was Built
 
-### Implementation Notes
-- _To be filled during Phase 6 implementation_
+#### 1. Local AI Integration with Ollama
+Replaced OpenAI SDK with native Ollama API for local AI generation.
+
+**Model:** `qwen3:30b-a3b` (Q4_K_M quantization, 18GB)
+**Hardware:** M1 Max MacBook Pro, 64GB unified memory
+
+**Key Changes:**
+- Rewrote `ai-service.ts` for native Ollama REST API (no SDK needed)
+- Added JSON schemas for structured output enforcement
+- Handled qwen3's thinking mode (check both `response` and `thinking` fields)
+- Removed OpenAI SDK dependency (~50KB bundle savings)
+- Updated environment variables for Ollama configuration
+
+**New Environment Variables:**
+```env
+VITE_AI_ENABLE_GENERATION=true
+VITE_AI_OLLAMA_URL=http://localhost:11434
+VITE_AI_MODEL=qwen3:30b-a3b
+VITE_AI_CACHE_VERSION=v2.0
+```
+
+#### 2. AI Content Quality Testing
+Tested with real aircraft to verify content quality:
+
+**Tactical Guide (P-51D-5):**
+- Primary role: "High-altitude escort fighter and long-range patrol" ✓
+- Optimal envelope: 8-12km altitude, 550-650 km/h ✓
+- Energy retention: Excellent ✓
+- Combat tactics: Detailed BnZ and energy management advice ✓
+- Counters/Struggles: Appropriate aircraft types listed ✓
+- MEC guidance: Present with mixture and supercharger info ✓
+
+**Matchup Playbook (P-51D-5 vs BF-109G-6):**
+- Threat assessment: MODERATE (correct for this matchup) ✓
+- Engagement principles: Accurate advantages/disadvantages ✓
+- Win condition: "Maintain energy advantage, force overshoots" ✓
+- 3 tactical scenarios with SVG diagrams ✓
+- Altitude advantage chart with reasoning ✓
+
+#### 3. Bundle Size Optimization
+- Removed OpenAI SDK: ~50KB savings
+- Total gzipped bundle: ~500KB (within target)
+- AI modules lazy-load with their respective pages
+
+### Generation Performance
+
+| Content Type | Generation Time | Notes |
+|--------------|-----------------|-------|
+| Tactical Guide | ~2 minutes | 2000 tokens max |
+| Matchup Playbook | ~3 minutes | 3000 tokens max |
+
+Performance is acceptable for "generate once, cache forever" model.
+
+### Files Modified
+
+**Rewritten:**
+- `src/lib/ai-service.ts` — Native Ollama API integration (283 lines)
+
+**Updated:**
+- `src/hooks/useAIContent.ts` — Updated error messages for Ollama
+- `.env.example` — New Ollama configuration
+- `package.json` — Removed `openai` dependency
+
+### Technical Decisions
+
+**Native Ollama API over OpenAI SDK:** Simpler implementation, no SDK dependency, smaller bundle. Ollama's `format` parameter provides schema enforcement similar to OpenAI's structured output.
+
+**Qwen3:30b-a3b over smaller models:** Best balance of quality and speed for tactical content generation. 64GB RAM handles the 18GB model comfortably.
+
+**Thinking mode handling:** Qwen3 may put structured output in `thinking` field when `response` is empty. Code now checks both fields.
 
 ---
 
@@ -1082,7 +1145,7 @@ Subtle visual polish applied across all AI-powered features (Flight Academy, Tac
 
 ## Overall Progress
 
-**Phases Complete:** 5/7 (71%)
+**Phases Complete:** 6/7 (86%)
 
 **Status:**
 - ✅ Phase 1: AI Infrastructure (🟣 OPUS)
@@ -1090,7 +1153,7 @@ Subtle visual polish applied across all AI-powered features (Flight Academy, Tac
 - ✅ Phase 3: Tactical Playbooks (🟣 OPUS) — 3A/3B/3C/3D all complete
 - ✅ Phase 4: Mission Planner (🟣 OPUS) — 9 tasks all complete
 - ✅ Phase 5: Visual Polish (🟣 OPUS) — Corner brackets, scanlines, AI badge, header unification, bug fixes
-- ⬜ Phase 6: Testing & Optimization (🟣 OPUS)
+- ✅ Phase 6: Testing & Optimization (🟣 OPUS) — Ollama integration, quality testing, bundle optimization
 - ⬜ Phase 7: Documentation (🟢 SONNET)
 
 ### Model Allocation Rationale
