@@ -2,6 +2,8 @@
 # Full CI/CD Pipeline — Forgejo Actions
 # Compatible with Forgejo's action registry
 # =============================================================================
+# Copy this to .forgejo/workflows/ci.yml in your repos
+# =============================================================================
 
 name: CI Pipeline
 
@@ -55,20 +57,18 @@ jobs:
   security-scan:
     runs-on: ubuntu-latest
     needs: test
-    container:
-      image: aquasec/trivy:latest
     steps:
       - uses: actions/checkout@v4
 
       # Trivy — filesystem vulnerability scan
       - name: Trivy Filesystem Scan
         run: |
-          trivy fs --severity CRITICAL,HIGH --exit-code 0 .
+          docker run --rm -v $PWD:/workspace aquasec/trivy:latest fs --severity CRITICAL,HIGH --exit-code 0 /workspace
 
       # Trivy — IaC misconfiguration scan
       - name: Trivy IaC Scan
         run: |
-          trivy config --severity CRITICAL,HIGH --exit-code 0 .
+          docker run --rm -v $PWD:/workspace aquasec/trivy:latest config --severity CRITICAL,HIGH --exit-code 0 /workspace
 
   # ---------------------------------------------------------------------------
   # Semgrep SAST Scan
@@ -76,14 +76,12 @@ jobs:
   semgrep-scan:
     runs-on: ubuntu-latest
     needs: test
-    container:
-      image: returntocorp/semgrep:latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Semgrep SAST Scan
         run: |
-          semgrep --config=p/default --config=p/owasp-top-ten --config=p/security-audit . || true
+          docker run --rm -v $PWD:/src returntocorp/semgrep:latest semgrep --config=p/default --config=p/owasp-top-ten --config=p/security-audit /src || true
 
   # ---------------------------------------------------------------------------
   # SonarQube Analysis
@@ -91,8 +89,6 @@ jobs:
   sonarqube:
     runs-on: ubuntu-latest
     needs: test
-    container:
-      image: sonarsource/sonar-scanner-cli:latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -100,12 +96,16 @@ jobs:
 
       - name: SonarQube Scan
         run: |
-          sonar-scanner \
-            -Dsonar.host.url=${{ env.SONAR_HOST_URL }} \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.projectKey=wt-sim-project \
-            -Dsonar.projectName="WT Sim Project" \
-            -Dsonar.sources=.
+          docker run --rm \
+            -v $PWD:/usr/src \
+            -e SONAR_HOST_URL=${{ env.SONAR_HOST_URL }} \
+            -e SONAR_TOKEN=${{ secrets.SONAR_TOKEN }} \
+            --network homelab \
+            sonarsource/sonar-scanner-cli:latest \
+            sonar-scanner \
+              -Dsonar.projectKey=wt-sim-project \
+              -Dsonar.projectName="WT Sim Project" \
+              -Dsonar.sources=/usr/src
 
   # ---------------------------------------------------------------------------
   # LLM Code Review (on PRs only) - posts comment directly on PR
@@ -201,9 +201,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [security-scan, semgrep-scan]
     if: hashFiles('Dockerfile') != ''
-    container:
-      image: docker:latest
-      options: --privileged
     steps:
       - uses: actions/checkout@v4
 
