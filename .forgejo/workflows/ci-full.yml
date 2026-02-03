@@ -60,26 +60,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Docker CLI
-        run: |
-          apt-get update
-          apt-get install -y ca-certificates curl
-          install -m 0755 -d /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
-          chmod a+r /etc/apt/keyrings/docker.asc
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-          apt-get update
-          apt-get install -y docker-ce-cli
-
-      # Trivy — filesystem vulnerability scan
+      # Trivy — filesystem vulnerability scan (uses action to avoid DinD mount issues)
       - name: Trivy Filesystem Scan
-        run: |
-          docker run --rm -v $PWD:/workspace aquasec/trivy:latest fs --severity CRITICAL,HIGH --exit-code 0 /workspace
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
 
       # Trivy — IaC misconfiguration scan
       - name: Trivy IaC Scan
-        run: |
-          docker run --rm -v $PWD:/workspace aquasec/trivy:latest config --severity CRITICAL,HIGH --exit-code 0 /workspace
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
 
   # ---------------------------------------------------------------------------
   # Semgrep SAST Scan
@@ -90,20 +87,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Docker CLI
-        run: |
-          apt-get update
-          apt-get install -y ca-certificates curl
-          install -m 0755 -d /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
-          chmod a+r /etc/apt/keyrings/docker.asc
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-          apt-get update
-          apt-get install -y docker-ce-cli
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-      - name: Semgrep SAST Scan
+      - name: Install and Run Semgrep
         run: |
-          docker run --rm -v $PWD:/src returntocorp/semgrep:latest semgrep --config=p/default --config=p/owasp-top-ten --config=p/security-audit /src || true
+          pip install semgrep
+          semgrep --config=p/default --config=p/owasp-top-ten --config=p/security-audit . || true
 
   # ---------------------------------------------------------------------------
   # SonarQube Analysis
@@ -116,29 +108,22 @@ jobs:
         with:
           fetch-depth: 0  # Full history for blame info
 
-      - name: Install Docker CLI
-        run: |
-          apt-get update
-          apt-get install -y ca-certificates curl
-          install -m 0755 -d /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
-          chmod a+r /etc/apt/keyrings/docker.asc
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-          apt-get update
-          apt-get install -y docker-ce-cli
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: SonarQube Scan
+      - name: Install and Run SonarQube Scanner
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          docker run --rm \
-            -v $PWD:/usr/src \
-            -e SONAR_HOST_URL=${{ env.SONAR_HOST_URL }} \
-            -e SONAR_TOKEN=${{ secrets.SONAR_TOKEN }} \
-            --network homelab \
-            sonarsource/sonar-scanner-cli:latest \
-            sonar-scanner \
-              -Dsonar.projectKey=wt-sim-project \
-              -Dsonar.projectName="WT Sim Project" \
-              -Dsonar.sources=/usr/src
+          npm install -g sonarqube-scanner
+          sonar-scanner \
+            -Dsonar.host.url=${{ env.SONAR_HOST_URL }} \
+            -Dsonar.token=$SONAR_TOKEN \
+            -Dsonar.projectKey=wt-sim-project \
+            -Dsonar.projectName="WT Sim Project" \
+            -Dsonar.sources=.
 
   # ---------------------------------------------------------------------------
   # LLM Code Review (on PRs only) - posts comment directly on PR
@@ -253,7 +238,9 @@ jobs:
           docker build -t ${{ github.repository }}:${{ github.sha }} .
 
       - name: Trivy Image Scan
-        run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy:latest image --severity CRITICAL,HIGH --exit-code 0 \
-            ${{ github.repository }}:${{ github.sha }}
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'image'
+          image-ref: '${{ github.repository }}:${{ github.sha }}'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
