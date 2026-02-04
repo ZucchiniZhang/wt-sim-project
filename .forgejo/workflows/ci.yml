@@ -1,0 +1,14 @@
+name: CI
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    uses: ZucchiniZhang/ci-workflows/.forgejo/workflows/ci-full.yml@main
+    with:
+      sonar_project_key: wt-sim-project
+      sonar_project_name: "WT Sim Project"
+    secrets: inherit
