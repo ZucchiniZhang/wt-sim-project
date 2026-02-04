@@ -127,8 +127,7 @@ jobs:
             -Dsonar.projectKey=$SONAR_PROJECT_KEY \
             -Dsonar.projectName="$SONAR_PROJECT_NAME" \
             -Dsonar.sources=. \
-            -Dsonar.sourceEncoding=UTF-8 \
-            -Dsonar.python.version=3.11
+            -Dsonar.sourceEncoding=UTF-8
 
   # ---------------------------------------------------------------------------
   # LLM Code Review (on PRs only)
