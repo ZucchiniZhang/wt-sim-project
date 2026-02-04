@@ -1,0 +1,263 @@
+# =============================================================================
+# Full CI/CD Pipeline
+# Works as both direct trigger AND reusable workflow (Forgejo v14 compatible)
+# =============================================================================
+
+name: CI Pipeline
+
+on:
+  # Direct triggers for this repo
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  # Reusable workflow support (for future Forgejo v15+)
+  workflow_call:
+    inputs:
+      sonar_project_key:
+        description: 'SonarQube project key'
+        required: false
+        type: string
+      sonar_project_name:
+        description: 'SonarQube project display name'
+        required: false
+        type: string
+      run_docker_build:
+        description: 'Whether to run Docker build job'
+        required: false
+        type: boolean
+        default: true
+      run_ai_review:
+        description: 'Whether to run AI code review on PRs'
+        required: false
+        type: boolean
+        default: true
+    # Note: secrets not supported in Forgejo v14 workflow_call
+    # Secrets are inherited automatically via `secrets: inherit`
+
+env:
+  SONAR_HOST_URL: http://homelab-sonarqube:9000
+  OLLAMA_HOST: http://host.docker.internal:11434
+  # Project-specific values
+  DEFAULT_SONAR_PROJECT_KEY: wt-sim-project
+  DEFAULT_SONAR_PROJECT_NAME: "WT Sim Project"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Lint & Test
+  # ---------------------------------------------------------------------------
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+
+      # Projects should add their own test commands here
+      # This is a placeholder that always passes
+      - name: Placeholder test
+        run: echo "Tests passed (add your test commands in the calling workflow)"
+
+  # ---------------------------------------------------------------------------
+  # Security Scanning with Trivy
+  # ---------------------------------------------------------------------------
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+
+      - name: Install Trivy
+        run: |
+          apt-get update && apt-get install -y curl
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Trivy Filesystem Scan
+        run: trivy fs --severity CRITICAL,HIGH --exit-code 0 .
+
+      - name: Trivy IaC Scan
+        run: trivy config --severity CRITICAL,HIGH --exit-code 0 .
+
+  # ---------------------------------------------------------------------------
+  # Semgrep SAST Scan
+  # ---------------------------------------------------------------------------
+  semgrep-scan:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+
+      - name: Install and Run Semgrep
+        run: |
+          apt-get update && apt-get install -y python3 python3-pip
+          pip3 install semgrep --break-system-packages
+          semgrep --config=p/default --config=p/owasp-top-ten --config=p/security-audit . || true
+
+  # ---------------------------------------------------------------------------
+  # SonarQube Analysis
+  # ---------------------------------------------------------------------------
+  sonarqube:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run SonarQube Scanner
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key || env.DEFAULT_SONAR_PROJECT_KEY }}
+          SONAR_PROJECT_NAME: ${{ inputs.sonar_project_name || env.DEFAULT_SONAR_PROJECT_NAME }}
+        run: |
+          npm install -g sonarqube-scanner
+          sonar-scanner \
+            -Dsonar.host.url=${{ env.SONAR_HOST_URL }} \
+            -Dsonar.token=$SONAR_TOKEN \
+            -Dsonar.projectKey=$SONAR_PROJECT_KEY \
+            -Dsonar.projectName="$SONAR_PROJECT_NAME" \
+            -Dsonar.sources=.
+
+  # ---------------------------------------------------------------------------
+  # LLM Code Review (on PRs only)
+  # ---------------------------------------------------------------------------
+  ai-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && (inputs.run_ai_review == true || inputs.run_ai_review == '')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+          fetch-depth: 0
+
+      - name: Get PR diff
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git diff origin/${{ github.base_ref }}...HEAD > /tmp/pr.diff
+          echo "Diff size: $(wc -c < /tmp/pr.diff) bytes"
+
+      - name: AI Code Review
+        env:
+          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 << 'EOF'
+          import json, urllib.request, os
+
+          with open('/tmp/pr.diff', 'r', errors='replace') as f:
+              diff = f.read()
+
+          print(f"Diff size: {len(diff)} bytes")
+
+          if len(diff) > 50000:
+              review = f"Diff too large for AI review ({len(diff)} bytes). Please review manually."
+          else:
+              diff = diff[:30000]
+              print("Calling Ollama...")
+
+              prompt = f"""You are a code reviewer. Review this git diff and provide feedback on:
+          1. Potential bugs or errors
+          2. Security issues
+          3. Suggested improvements
+
+          Be concise. Only mention real issues, not style preferences.
+
+          ```diff
+          {diff}
+          ```
+
+          Provide your review in plain text (not JSON):"""
+
+              payload = json.dumps({
+                  "model": "qwen3-coder:30b",
+                  "prompt": prompt,
+                  "stream": False,
+                  "options": {"temperature": 0.2, "num_predict": 2048}
+              }).encode()
+
+              try:
+                  req = urllib.request.Request(
+                      "http://host.docker.internal:11434/api/generate",
+                      data=payload,
+                      headers={"Content-Type": "application/json"}
+                  )
+                  with urllib.request.urlopen(req, timeout=180) as resp:
+                      result = json.load(resp)
+                      review = result.get("response", "No response from model")
+                      print(f"Got review: {len(review)} chars")
+              except Exception as e:
+                  review = f"Error calling Ollama: {e}"
+                  print(review)
+
+          comment_body = f"## AI Code Review\n\n{review}"
+          payload = json.dumps({"body": comment_body}).encode()
+
+          req = urllib.request.Request(
+              f"http://forgejo:3000/api/v1/repos/{os.environ['REPO']}/issues/{os.environ['PR_NUMBER']}/comments",
+              data=payload,
+              headers={"Content-Type": "application/json", "Authorization": f"token {os.environ['FORGEJO_TOKEN']}"}
+          )
+
+          try:
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  print(f"Comment posted to PR #{os.environ['PR_NUMBER']}")
+          except Exception as e:
+              print(f"Failed to post comment: {e}")
+          EOF
+
+  # ---------------------------------------------------------------------------
+  # Docker Build (if Dockerfile exists)
+  # ---------------------------------------------------------------------------
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [security-scan, semgrep-scan]
+    if: inputs.run_docker_build == true || inputs.run_docker_build == ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+
+      - name: Check for Dockerfile
+        id: dockerfile
+        run: |
+          if [ -f "Dockerfile" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "No Dockerfile found, skipping build"
+          fi
+
+      - name: Install Docker CLI
+        if: steps.dockerfile.outputs.exists == 'true'
+        run: |
+          apt-get update
+          apt-get install -y ca-certificates curl
+          install -m 0755 -d /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+          chmod a+r /etc/apt/keyrings/docker.asc
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+          apt-get update
+          apt-get install -y docker-ce-cli
+
+      - name: Build Docker image
+        if: steps.dockerfile.outputs.exists == 'true'
+        run: docker build -t ${{ github.repository }}:${{ github.sha }} .
+
+      - name: Install Trivy for image scan
+        if: steps.dockerfile.outputs.exists == 'true'
+        run: curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Trivy Image Scan
+        if: steps.dockerfile.outputs.exists == 'true'
+        run: trivy image --severity CRITICAL,HIGH --exit-code 0 ${{ github.repository }}:${{ github.sha }}
