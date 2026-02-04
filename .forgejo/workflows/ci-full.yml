@@ -112,7 +112,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Run SonarQube Scanner
         env:
@@ -126,7 +126,9 @@ jobs:
             -Dsonar.token=$SONAR_TOKEN \
             -Dsonar.projectKey=$SONAR_PROJECT_KEY \
             -Dsonar.projectName="$SONAR_PROJECT_NAME" \
-            -Dsonar.sources=.
+            -Dsonar.sources=. \
+            -Dsonar.sourceEncoding=UTF-8 \
+            -Dsonar.python.version=3.11
 
   # ---------------------------------------------------------------------------
   # LLM Code Review (on PRs only)
